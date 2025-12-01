@@ -28,4 +28,10 @@ public class ProgressTracker {
 
     public void setStreak(int s) { streak = s; }
     public void setLastPressTime(long t) { lastPressTime = t; }
+
+    public double getProgress() {
+        long elapsed = System.currentTimeMillis() - lastPressTime;
+        double progress = (double) elapsed / 86400000;
+        return Math.min(1.0, progress);
+    }
 }

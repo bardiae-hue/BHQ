@@ -71,6 +71,18 @@ public class BHQ extends Application {
                         "-fx-font-family: 'Segoe UI';"
         );
 
+        TextField goalDays = new TextField();
+        goalDays.setPromptText("Enter target number of days...");
+        goalDays.setFont(Font.font("Segoe UI", 16));
+        goalDays.setStyle(
+                "-fx-background-radius: 10;" +
+                        "-fx-background-color: #1E1E1E;" +
+                        "-fx-text-fill: #ffffff;" +
+                        "-fx-prompt-text-fill: #777;" +
+                        "-fx-padding: 10;" +
+                        "-fx-font-family: 'Segoe UI';"
+        );
+
         Button addGoalButton = new Button("Add Goal");
         addGoalButton.setStyle(buttonStyle("#2E2E2E"));
         addGoalButton.setOnMouseEntered(e -> addGoalButton.setStyle(buttonStyle("#3A3A3A")));
@@ -90,16 +102,29 @@ public class BHQ extends Application {
 
         addGoalButton.setOnAction(e -> {
             String desc = goalInput.getText().trim();
-            if (!desc.isEmpty()) {
-                Goals goal = new Goals(desc);
+            String daysText = goalDays.getText().trim();
+
+            if (!desc.isEmpty() && !daysText.isEmpty()) {
+                int numDays;
+
+                try {
+                    numDays = Integer.parseInt(daysText);
+                    if (numDays <= 0) return;
+                } catch (NumberFormatException ex) {
+                    return;
+                }
+
+                Goals goal = new Goals(desc, numDays);
                 goals.add(goal);
                 goalsContainer.getChildren().add(createGoalBox(goal));
                 goalInput.clear();
+                goalDays.clear();
                 DataStore.save(goals);
+
             }
         });
 
-        VBox root = new VBox(20, goalInput, addGoalButton, scrollPane);
+        VBox root = new VBox(20, goalInput,goalDays ,addGoalButton, scrollPane);
         root.setPadding(new Insets(20));
         root.setStyle("-fx-background-color: " + BG_MAIN + ";");
 
@@ -113,21 +138,35 @@ public class BHQ extends Application {
     // CREATE GOAL CARD
     // -------------------------------------------------------------
     private VBox createGoalBox(Goals goal) {
+        Label streakLabel = new Label(
+                "Streak: " + goal.getTracker().getStreak() +
+                        " / " + goal.getTracker().getTargetDays()
+        );
+        streakLabel.setFont(Font.font("Segoe UI", 15));
+        streakLabel.setTextFill(Color.web(TEXT_DIM));
+
+        Label timerLabel = new Label("");
+        timerLabel.setFont(Font.font("Segoe UI", 14));
+        timerLabel.setTextFill(Color.web(TEXT_DIM));
 
         Label descLabel = new Label(goal.getDescription());
         descLabel.setFont(Font.font("Segoe UI", 18));
         descLabel.setTextFill(Color.web(TEXT_LIGHT));
+        Button pressButton = new Button("One more day ✊");
+        pressButton.setStyle(buttonStyle("#333333"));
+        pressButton.setOnMouseEntered(ev -> pressButton.setStyle(buttonStyle("#444444")));
+        pressButton.setOnMouseExited(ev -> pressButton.setStyle(buttonStyle("#333333")));
+        pressButton.setDisable(!goal.getTracker().canPress());
 
-        Label streakLabel = new Label("Streak: " + goal.getTracker().getStreak());
+        if (goal.getTracker().isComplete()) {
+            pressButton.setDisable(true);
+            timerLabel.setText("Goal completed 🎉");
+        }
         streakLabel.setFont(Font.font("Segoe UI", 15));
         streakLabel.setTextFill(Color.web(TEXT_DIM));
 
         ProgressBar progressBar = new ProgressBar(goal.getTracker().getProgress());
         progressBar.setStyle("-fx-accent: #4cd137;");
-
-        Label timerLabel = new Label("");
-        timerLabel.setFont(Font.font("Segoe UI", 14));
-        timerLabel.setTextFill(Color.web(TEXT_DIM));
 
         // -------------------------------------------------------------
         // MOTIVATION LINE + THREE DOT ANIMATION
@@ -181,15 +220,11 @@ public class BHQ extends Application {
         // -------------------------------------------------------------
         // BUTTON + TIMER
         // -------------------------------------------------------------
-        Button pressButton = new Button("One more day ✊");
-        pressButton.setStyle(buttonStyle("#333333"));
-        pressButton.setOnMouseEntered(ev -> pressButton.setStyle(buttonStyle("#444444")));
-        pressButton.setOnMouseExited(ev -> pressButton.setStyle(buttonStyle("#333333")));
-        pressButton.setDisable(!goal.getTracker().canPress());
 
         pressButton.setOnAction(ev -> {
             goal.getTracker().recordPress();
-            streakLabel.setText("Streak: " + goal.getTracker().getStreak());
+
+            streakLabel.setText("Streak: " + goal.getTracker().getStreak() + " / " + goal.getTracker().getTargetDays());
             progressBar.setProgress(goal.getTracker().getProgress());
             pressButton.setDisable(true);
             DataStore.save(goals);
@@ -199,7 +234,10 @@ public class BHQ extends Application {
             @Override
             public void handle(long now) {
                 long millisLeft = goal.getTracker().millisUntilNextPress();
-                if (millisLeft > 0) {
+                if (goal.getTracker().isComplete()) {
+                    timerLabel.setText("Goal completed 🎉");
+                    pressButton.setDisable(true);
+                } else if (millisLeft > 0) {
                     long hours = millisLeft / 3600000;
                     long mins = (millisLeft % 3600000) / 60000;
                     long secs = (millisLeft % 60000) / 1000;

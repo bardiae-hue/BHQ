@@ -11,6 +11,7 @@ public class DataStore {
                 out.println(goal.getDescription());
                 out.println(goal.getTracker().getStreak());
                 out.println(goal.getTracker().getLastPressTime());
+                out.println(goal.getTracker().getTargetDays());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -19,19 +20,28 @@ public class DataStore {
 
     public static List<Goals> load() {
         List<Goals> goals = new ArrayList<>();
+
         try (BufferedReader br = new BufferedReader(new FileReader(FILE_NAME))) {
             String desc;
+
             while ((desc = br.readLine()) != null) {
                 int streak = Integer.parseInt(br.readLine());
                 long last = Long.parseLong(br.readLine());
-                Goals goal = new Goals(desc);
+
+                String daysLine = br.readLine();
+                int numDays = (daysLine != null) ? Integer.parseInt(daysLine) : 30;
+
+                Goals goal = new Goals(desc, numDays);
                 goal.getTracker().setStreak(streak);
                 goal.getTracker().setLastPressTime(last);
+
                 goals.add(goal);
             }
         } catch (Exception e) {
-            // first run — return empty list
+            // First run or corrupt file → return empty list
         }
+
         return goals;
     }
+
 }

@@ -220,13 +220,27 @@ public class BHQ extends Application {
         // -------------------------------------------------------------
         // BUTTON + TIMER
         // -------------------------------------------------------------
-
+        VBox box = new VBox(10, descLabel, streakLabel, progressBar, timerLabel, pressButton, motivationBox);
         pressButton.setOnAction(ev -> {
             goal.getTracker().recordPress();
 
-            streakLabel.setText("Streak: " + goal.getTracker().getStreak() + " / " + goal.getTracker().getTargetDays());
+            if (goal.goalIsCompleted()) {
+                motivationTimer.stop();
+                dotTimer.stop();
+
+                goals.remove(goal);
+                goalsContainer.getChildren().remove(box);
+                DataStore.save(goals);
+                return;
+            }
+
+            streakLabel.setText(
+                    "Streak: " + goal.getTracker().getStreak() +
+                            " / " + goal.getTracker().getTargetDays()
+            );
             progressBar.setProgress(goal.getTracker().getProgress());
             pressButton.setDisable(true);
+
             DataStore.save(goals);
         });
 
@@ -235,7 +249,14 @@ public class BHQ extends Application {
             public void handle(long now) {
                 long millisLeft = goal.getTracker().millisUntilNextPress();
                 if (goal.getTracker().isComplete()) {
-                    timerLabel.setText("Goal completed 🎉");
+                    motivationTimer.stop();
+                    dotTimer.stop();
+                    this.stop();  // stops this timer
+
+                    // remove goal
+                    goals.remove(goal);
+                    goalsContainer.getChildren().remove(box);
+                    DataStore.save(goals);
                     pressButton.setDisable(true);
                 } else if (millisLeft > 0) {
                     long hours = millisLeft / 3600000;
@@ -250,7 +271,6 @@ public class BHQ extends Application {
         };
         timer.start();
 
-        VBox box = new VBox(10, descLabel, streakLabel, progressBar, timerLabel, pressButton, motivationBox);
         box.setPadding(new Insets(15));
         box.setStyle(
                 "-fx-background-color: " + CARD_BG + ";" +

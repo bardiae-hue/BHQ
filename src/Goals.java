@@ -9,4 +9,6 @@ public class Goals {
 
     public String getDescription() { return description; }
     public ProgressTracker getTracker() { return tracker; }
+
+    public boolean goalIsCompleted(){return tracker.isComplete();}
 }
